@@ -1,0 +1,706 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<title>Lookora — Virtual Try-On</title>
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@400;500;600&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
+
+<!-- Mind AR + Three.js -->
+<script src="https://cdn.jsdelivr.net/npm/mind-ar@1.2.2/dist/mindar-face-three.prod.js"></script>
+
+<style>
+:root{
+  --gold:#C9A84C;--gold-dark:#9A7A2E;--gold-light:#E8C97A;
+  --bg:#0F0E0C;--surface:rgba(255,255,255,0.06);--surface2:rgba(255,255,255,0.1);
+  --border:rgba(255,255,255,0.1);--text:#F5F0E8;--text2:rgba(245,240,232,0.6);
+  --radius:12px;--radius-full:100px;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{height:100%;overflow:hidden;background:var(--bg)}
+body{font-family:'DM Sans',sans-serif;color:var(--text)}
+
+/* AR CONTAINER */
+#ar-container{position:fixed;inset:0;z-index:1}
+#ar-container canvas{width:100%!important;height:100%!important}
+
+/* LOADING SCREEN */
+#loading{
+  position:fixed;inset:0;z-index:100;
+  background:var(--bg);
+  display:flex;flex-direction:column;align-items:center;justify-content:center;gap:20px;
+  transition:opacity .5s;
+}
+#loading.hide{opacity:0;pointer-events:none}
+.loading-logo{display:flex;align-items:center;gap:10px;margin-bottom:8px}
+.loading-logo-mark{width:40px;height:40px;background:var(--gold);border-radius:10px;display:flex;align-items:center;justify-content:center}
+.loading-logo-mark svg{width:22px;height:22px;fill:none;stroke:white;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+.loading-name{font-family:'Cormorant Garamond',serif;font-size:26px;font-weight:600;color:var(--text)}
+.loading-bar-bg{width:200px;height:3px;background:var(--border);border-radius:4px;overflow:hidden}
+.loading-bar{height:100%;background:var(--gold);border-radius:4px;width:0%;transition:width .3s}
+.loading-text{font-size:13px;color:var(--text2)}
+
+/* START SCREEN */
+#start-screen{
+  position:fixed;inset:0;z-index:90;
+  background:var(--bg);
+  display:flex;flex-direction:column;align-items:center;justify-content:center;
+  padding:32px;
+  transition:opacity .4s;
+}
+#start-screen.hide{opacity:0;pointer-events:none}
+.start-logo{display:flex;align-items:center;gap:10px;margin-bottom:32px}
+.start-logo-mark{width:44px;height:44px;background:var(--gold);border-radius:11px;display:flex;align-items:center;justify-content:center}
+.start-logo-mark svg{width:24px;height:24px;fill:none;stroke:white;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+.start-logo-name{font-family:'Cormorant Garamond',serif;font-size:28px;font-weight:600}
+.start-title{font-family:'Cormorant Garamond',serif;font-size:32px;font-weight:500;text-align:center;margin-bottom:10px;line-height:1.2}
+.start-title em{font-style:italic;color:var(--gold)}
+.start-sub{font-size:14px;color:var(--text2);text-align:center;line-height:1.7;max-width:320px;margin-bottom:32px}
+.product-selector{display:flex;flex-direction:column;gap:10px;width:100%;max-width:360px;margin-bottom:28px}
+.product-opt{
+  display:flex;align-items:center;gap:14px;
+  padding:14px 16px;
+  background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);
+  cursor:pointer;transition:all .2s;
+}
+.product-opt:hover,.product-opt.selected{border-color:rgba(201,168,76,.5);background:rgba(201,168,76,.08)}
+.product-opt-icon{width:40px;height:40px;border-radius:8px;background:rgba(201,168,76,.12);display:flex;align-items:center;justify-content:center;font-size:20px;flex-shrink:0}
+.product-opt-info{flex:1}
+.product-opt-name{font-size:14px;font-weight:500;color:var(--text)}
+.product-opt-price{font-size:12px;color:var(--text2);margin-top:2px}
+.product-opt-check{width:20px;height:20px;border-radius:50%;border:1.5px solid var(--border);display:flex;align-items:center;justify-content:center;transition:all .2s}
+.product-opt.selected .product-opt-check{background:var(--gold);border-color:var(--gold)}
+.product-opt.selected .product-opt-check::after{content:'✓';font-size:11px;color:var(--bg);font-weight:500}
+.start-btn{
+  width:100%;max-width:360px;
+  padding:16px;border-radius:var(--radius-full);
+  background:var(--gold);color:var(--bg);
+  border:none;font-family:'DM Sans',sans-serif;font-size:15px;font-weight:500;
+  cursor:pointer;transition:all .2s;
+  display:flex;align-items:center;justify-content:center;gap:8px;
+}
+.start-btn:hover{background:var(--gold-light)}
+.start-btn svg{width:18px;height:18px;fill:none;stroke:currentColor;stroke-width:2}
+.start-note{font-size:12px;color:var(--text2);margin-top:12px;text-align:center}
+
+/* OVERLAY UI */
+#ui-overlay{
+  position:fixed;inset:0;z-index:50;
+  pointer-events:none;
+  display:none;
+}
+#ui-overlay.active{display:block}
+
+/* TOP BAR */
+.ui-topbar{
+  position:absolute;top:0;left:0;right:0;
+  padding:16px 20px;
+  display:flex;align-items:center;justify-content:space-between;
+  background:linear-gradient(to bottom, rgba(0,0,0,0.6), transparent);
+  pointer-events:all;
+}
+.ui-logo{display:flex;align-items:center;gap:8px}
+.ui-logo-mark{width:28px;height:28px;background:var(--gold);border-radius:7px;display:flex;align-items:center;justify-content:center}
+.ui-logo-mark svg{width:15px;height:15px;fill:none;stroke:white;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+.ui-logo-name{font-family:'Cormorant Garamond',serif;font-size:18px;font-weight:600}
+.ui-top-actions{display:flex;gap:8px}
+.ui-icon-btn{
+  width:36px;height:36px;border-radius:50%;
+  background:rgba(0,0,0,0.4);border:1px solid var(--border);
+  backdrop-filter:blur(8px);
+  display:flex;align-items:center;justify-content:center;cursor:pointer;
+}
+.ui-icon-btn svg{width:18px;height:18px;fill:none;stroke:var(--text);stroke-width:1.5}
+
+/* STATUS BAR */
+.ui-status{
+  position:absolute;top:70px;left:50%;transform:translateX(-50%);
+  display:flex;align-items:center;gap:6px;
+  padding:6px 14px;border-radius:var(--radius-full);
+  background:rgba(0,0,0,0.5);border:1px solid var(--border);
+  backdrop-filter:blur(8px);
+  font-size:12px;color:var(--text);white-space:nowrap;
+  pointer-events:none;
+}
+.status-dot{width:7px;height:7px;border-radius:50%;background:#4CAF50;animation:pulse 1.5s infinite}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.4}}
+.status-dot.searching{background:var(--gold);animation:pulse 1s infinite}
+
+/* FACE GUIDE */
+#face-guide{
+  position:absolute;top:50%;left:50%;
+  transform:translate(-50%,-55%);
+  width:200px;height:240px;
+  border:2px solid rgba(201,168,76,.4);
+  border-radius:50%;
+  pointer-events:none;
+  transition:opacity .5s;
+}
+#face-guide.hide{opacity:0}
+#face-guide::before{
+  content:'Position your face here';
+  position:absolute;bottom:-32px;left:50%;transform:translateX(-50%);
+  font-size:12px;color:rgba(201,168,76,.8);white-space:nowrap;
+}
+
+/* BOTTOM PANEL */
+.ui-bottom{
+  position:absolute;bottom:0;left:0;right:0;
+  padding:16px 20px 32px;
+  background:linear-gradient(to top, rgba(0,0,0,0.85) 0%, transparent 100%);
+  pointer-events:all;
+}
+.product-strip{
+  display:flex;gap:10px;overflow-x:auto;padding-bottom:12px;margin-bottom:14px;
+  scrollbar-width:none;
+}
+.product-strip::-webkit-scrollbar{display:none}
+.strip-item{
+  flex-shrink:0;
+  width:72px;
+  display:flex;flex-direction:column;align-items:center;gap:6px;
+  cursor:pointer;
+}
+.strip-thumb{
+  width:64px;height:64px;border-radius:10px;
+  background:rgba(255,255,255,0.08);border:1.5px solid transparent;
+  display:flex;align-items:center;justify-content:center;font-size:26px;
+  transition:all .2s;
+}
+.strip-item.active .strip-thumb{border-color:var(--gold);background:rgba(201,168,76,.12)}
+.strip-name{font-size:10px;color:var(--text2);text-align:center;line-height:1.3}
+.strip-item.active .strip-name{color:var(--gold)}
+
+.bottom-actions{display:flex;gap:10px;align-items:center}
+.action-btn{
+  flex:1;padding:13px;border-radius:var(--radius-full);
+  font-family:'DM Sans',sans-serif;font-size:14px;font-weight:500;
+  cursor:pointer;transition:all .2s;
+  display:flex;align-items:center;justify-content:center;gap:7px;
+}
+.action-btn svg{width:17px;height:17px;fill:none;stroke:currentColor;stroke-width:1.5}
+.btn-try{background:var(--gold);color:var(--bg);border:none}
+.btn-try:hover{background:var(--gold-light)}
+.btn-save{background:rgba(255,255,255,.1);color:var(--text);border:1px solid var(--border);backdrop-filter:blur(8px)}
+.btn-save:hover{background:rgba(255,255,255,.15)}
+.btn-share{background:rgba(255,255,255,.1);color:var(--text);border:1px solid var(--border);backdrop-filter:blur(8px);flex:0;width:48px;padding:13px 0}
+
+/* TOAST */
+#toast{
+  position:fixed;bottom:120px;left:50%;transform:translateX(-50%);
+  padding:10px 20px;border-radius:var(--radius-full);
+  background:rgba(0,0,0,0.8);border:1px solid var(--border);
+  font-size:13px;color:var(--text);
+  z-index:200;opacity:0;transition:opacity .3s;pointer-events:none;
+  backdrop-filter:blur(8px);white-space:nowrap;
+}
+#toast.show{opacity:1}
+
+/* PRODUCT INFO CARD */
+#product-card{
+  position:absolute;top:130px;right:16px;
+  width:160px;
+  background:rgba(0,0,0,0.6);border:1px solid var(--border);
+  border-radius:var(--radius);padding:14px;
+  backdrop-filter:blur(12px);
+  pointer-events:all;
+  transition:all .3s;
+}
+#product-card.hide{opacity:0;pointer-events:none}
+.pc-emoji{font-size:28px;margin-bottom:8px}
+.pc-name{font-size:13px;font-weight:500;color:var(--text);margin-bottom:2px}
+.pc-price{font-size:13px;color:var(--gold);margin-bottom:10px}
+.pc-buy{
+  width:100%;padding:8px;border-radius:var(--radius-full);
+  background:var(--gold);color:var(--bg);border:none;
+  font-family:'DM Sans',sans-serif;font-size:12px;font-weight:500;cursor:pointer;
+}
+
+/* SWITCH MODE BTN */
+.mode-toggle{
+  position:absolute;top:70px;right:16px;
+  display:flex;flex-direction:column;gap:8px;
+  pointer-events:all;
+}
+.mode-btn{
+  width:40px;height:40px;border-radius:50%;
+  background:rgba(0,0,0,0.5);border:1px solid var(--border);
+  backdrop-filter:blur(8px);
+  display:flex;align-items:center;justify-content:center;cursor:pointer;
+  transition:all .2s;
+}
+.mode-btn.active{background:rgba(201,168,76,.2);border-color:rgba(201,168,76,.5)}
+.mode-btn svg{width:18px;height:18px;fill:none;stroke:var(--text);stroke-width:1.5}
+.mode-btn.active svg{stroke:var(--gold)}
+
+/* PHOTO MODE */
+#photo-mode{
+  position:fixed;inset:0;z-index:80;
+  background:var(--bg);
+  display:none;flex-direction:column;
+  align-items:center;justify-content:center;
+  padding:24px;
+}
+#photo-mode.active{display:flex}
+.photo-upload-area{
+  width:100%;max-width:360px;height:280px;
+  border:2px dashed rgba(201,168,76,.3);border-radius:16px;
+  display:flex;flex-direction:column;align-items:center;justify-content:center;
+  cursor:pointer;margin-bottom:20px;transition:all .2s;
+  background:rgba(201,168,76,.04);
+}
+.photo-upload-area:hover{border-color:rgba(201,168,76,.6);background:rgba(201,168,76,.08)}
+.photo-upload-area svg{width:40px;height:40px;stroke:rgba(201,168,76,.6);margin-bottom:12px}
+.photo-upload-area p{font-size:14px;color:var(--text2)}
+.photo-upload-area span{font-size:12px;color:var(--text2);opacity:.6;margin-top:4px}
+#photo-preview{width:100%;max-width:360px;border-radius:16px;display:none;margin-bottom:20px}
+</style>
+</head>
+<body>
+
+<!-- LOADING -->
+<div id="loading">
+  <div class="loading-logo">
+    <div class="loading-logo-mark">
+      <svg viewBox="0 0 24 24"><path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/></svg>
+    </div>
+    <span class="loading-name">Lookora</span>
+  </div>
+  <div class="loading-bar-bg"><div class="loading-bar" id="loading-bar"></div></div>
+  <div class="loading-text" id="loading-text">Loading AR engine...</div>
+</div>
+
+<!-- START SCREEN -->
+<div id="start-screen">
+  <div class="start-logo">
+    <div class="start-logo-mark">
+      <svg viewBox="0 0 24 24"><path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/></svg>
+    </div>
+    <span class="start-logo-name">Lookora</span>
+  </div>
+  <div class="start-title">Try on jewelry <em>before</em><br>you buy it</div>
+  <div class="start-sub">Live AR try-on — see how jewelry looks on you in real time. No app needed.</div>
+
+  <div class="product-selector">
+    <div class="product-opt selected" onclick="selectProduct(this,0)">
+      <div class="product-opt-icon">💎</div>
+      <div class="product-opt-info">
+        <div class="product-opt-name">Diamond drop earrings</div>
+        <div class="product-opt-price">₹12,500</div>
+      </div>
+      <div class="product-opt-check"></div>
+    </div>
+    <div class="product-opt" onclick="selectProduct(this,1)">
+      <div class="product-opt-icon">⭕</div>
+      <div class="product-opt-info">
+        <div class="product-opt-name">Gold hoop earrings</div>
+        <div class="product-opt-price">₹8,200</div>
+      </div>
+      <div class="product-opt-check"></div>
+    </div>
+    <div class="product-opt" onclick="selectProduct(this,2)">
+      <div class="product-opt-icon">🔴</div>
+      <div class="product-opt-info">
+        <div class="product-opt-name">Ruby stud earrings</div>
+        <div class="product-opt-price">₹6,800</div>
+      </div>
+      <div class="product-opt-check"></div>
+    </div>
+  </div>
+
+  <button class="start-btn" onclick="startAR()">
+    <svg viewBox="0 0 24 24"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg>
+    Start live try-on
+  </button>
+  <div class="start-note">📷 Camera permission required · Works in Chrome & Safari</div>
+</div>
+
+<!-- AR CONTAINER -->
+<div id="ar-container"></div>
+
+<!-- UI OVERLAY -->
+<div id="ui-overlay">
+  <div class="ui-topbar">
+    <div class="ui-logo">
+      <div class="ui-logo-mark">
+        <svg viewBox="0 0 24 24"><path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/></svg>
+      </div>
+      <span class="ui-logo-name">Lookora</span>
+    </div>
+    <div class="ui-top-actions">
+      <div class="ui-icon-btn" onclick="toggleProductCard()" title="Product info">
+        <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+      </div>
+      <div class="ui-icon-btn" onclick="stopAR()" title="Close">
+        <svg viewBox="0 0 24 24"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+      </div>
+    </div>
+  </div>
+
+  <div class="ui-status" id="status-bar">
+    <div class="status-dot searching" id="status-dot"></div>
+    <span id="status-text">Searching for face...</span>
+  </div>
+
+  <div id="face-guide"></div>
+
+  <div class="mode-toggle">
+    <div class="mode-btn active" onclick="setMode('live',this)" title="Live AR">
+      <svg viewBox="0 0 24 24"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg>
+    </div>
+    <div class="mode-btn" onclick="setMode('photo',this)" title="Photo try-on">
+      <svg viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
+    </div>
+  </div>
+
+  <div id="product-card">
+    <div class="pc-emoji" id="pc-emoji">💎</div>
+    <div class="pc-name" id="pc-name">Diamond drop earrings</div>
+    <div class="pc-price" id="pc-price">₹12,500</div>
+    <button class="pc-buy">Buy now →</button>
+  </div>
+
+  <div class="ui-bottom">
+    <div class="product-strip" id="product-strip">
+      <div class="strip-item active" onclick="switchProduct(0,this)">
+        <div class="strip-thumb">💎</div>
+        <div class="strip-name">Diamond drops</div>
+      </div>
+      <div class="strip-item" onclick="switchProduct(1,this)">
+        <div class="strip-thumb">⭕</div>
+        <div class="strip-name">Gold hoops</div>
+      </div>
+      <div class="strip-item" onclick="switchProduct(2,this)">
+        <div class="strip-thumb">🔴</div>
+        <div class="strip-name">Ruby studs</div>
+      </div>
+      <div class="strip-item" onclick="switchProduct(3,this)">
+        <div class="strip-thumb">✨</div>
+        <div class="strip-name">Pearl drops</div>
+      </div>
+      <div class="strip-item" onclick="switchProduct(4,this)">
+        <div class="strip-thumb">💛</div>
+        <div class="strip-name">Chandelier</div>
+      </div>
+    </div>
+    <div class="bottom-actions">
+      <button class="action-btn btn-save" onclick="savePhoto()">
+        <svg viewBox="0 0 24 24"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>
+        Save look
+      </button>
+      <button class="action-btn btn-try" onclick="showToast('✦ Looking great!')">
+        <svg viewBox="0 0 24 24"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg>
+        Try on
+      </button>
+      <button class="action-btn btn-share" onclick="shareProduct()">
+        <svg viewBox="0 0 24 24"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/></svg>
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- PHOTO MODE -->
+<div id="photo-mode">
+  <div class="ui-topbar" style="position:relative;width:100%;max-width:400px;padding:0 0 20px">
+    <div class="ui-logo">
+      <div class="ui-logo-mark">
+        <svg viewBox="0 0 24 24"><path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/></svg>
+      </div>
+      <span class="ui-logo-name">Photo try-on</span>
+    </div>
+    <div class="ui-icon-btn" style="background:var(--surface);border:1px solid var(--border)" onclick="setMode('live',document.querySelector('.mode-btn'))">
+      <svg viewBox="0 0 24 24" style="width:18px;height:18px;fill:none;stroke:var(--text);stroke-width:1.5"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+    </div>
+  </div>
+  <div class="photo-upload-area" onclick="document.getElementById('file-input').click()">
+    <svg viewBox="0 0 24 24" fill="none" stroke-width="1.5"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+    <p>Upload your selfie</p>
+    <span>JPG or PNG · Tap to choose photo</span>
+  </div>
+  <img id="photo-preview" alt="Your selfie preview">
+  <input type="file" id="file-input" accept="image/*" style="display:none" onchange="previewPhoto(this)">
+  <button class="start-btn" style="max-width:360px" onclick="showToast('✦ Jewelry placed on your photo!')">
+    <svg viewBox="0 0 24 24" style="width:18px;height:18px;fill:none;stroke:currentColor;stroke-width:2"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
+    Place jewelry on photo
+  </button>
+</div>
+
+<!-- TOAST -->
+<div id="toast"></div>
+
+<script>
+const products = [
+  {name:'Diamond drop earrings', price:'₹12,500', emoji:'💎', color:0xE8F4FF},
+  {name:'Gold hoop earrings', price:'₹8,200', emoji:'⭕', color:0xC9A84C},
+  {name:'Ruby stud earrings', price:'₹6,800', emoji:'🔴', color:0xC0392B},
+  {name:'Pearl drop earrings', price:'₹9,100', emoji:'✨', color:0xF5F0E8},
+  {name:'Chandelier earrings', price:'₹15,800', emoji:'💛', color:0xFFD700}
+];
+
+let currentProduct = 0;
+let arStarted = false;
+let mindarThree = null;
+let earringLeft = null;
+let earringRight = null;
+let faceDetected = false;
+
+// Simulate loading
+let progress = 0;
+const loadInterval = setInterval(() => {
+  progress += Math.random() * 15;
+  if(progress >= 100) {
+    progress = 100;
+    clearInterval(loadInterval);
+    setTimeout(() => {
+      document.getElementById('loading').classList.add('hide');
+    }, 400);
+  }
+  document.getElementById('loading-bar').style.width = Math.min(progress,100) + '%';
+  const msgs = ['Loading AR engine...','Setting up face tracker...','Preparing 3D renderer...','Almost ready...'];
+  document.getElementById('loading-text').textContent = msgs[Math.floor(progress/25)] || 'Ready!';
+}, 200);
+
+function selectProduct(el, idx) {
+  document.querySelectorAll('.product-opt').forEach(o => o.classList.remove('selected'));
+  el.classList.add('selected');
+  currentProduct = idx;
+}
+
+async function startAR() {
+  document.getElementById('start-screen').classList.add('hide');
+  document.getElementById('ui-overlay').classList.add('active');
+
+  try {
+    const stream = await navigator.mediaDevices.getUserMedia({video:{facingMode:'user'}});
+    stream.getTracks().forEach(t => t.stop());
+    initMindAR();
+  } catch(e) {
+    showToast('📷 Camera permission denied — please allow camera access');
+    document.getElementById('start-screen').classList.remove('hide');
+    document.getElementById('ui-overlay').classList.remove('active');
+  }
+}
+
+function initMindAR() {
+  const container = document.getElementById('ar-container');
+
+  mindarThree = new window.MINDAR.FACE.MindARThree({
+    container: container,
+    filterMinCF: 0.001,
+    filterBeta: 0.01
+  });
+
+  const {renderer, scene, camera} = mindarThree;
+
+  // Lighting
+  const ambientLight = new THREE.AmbientLight(0xffffff, 0.8);
+  scene.add(ambientLight);
+  const dirLight = new THREE.DirectionalLight(0xFFE4A0, 1.2);
+  dirLight.position.set(0, 1, 2);
+  scene.add(dirLight);
+  const fillLight = new THREE.DirectionalLight(0xffffff, 0.4);
+  fillLight.position.set(-1, 0, 1);
+  scene.add(fillLight);
+
+  // Create earring geometry — elegant teardrop shape
+  function createEarring(color) {
+    const group = new THREE.Group();
+
+    // Main gem — teardrop shape using lathe
+    const points = [];
+    for(let i = 0; i <= 10; i++) {
+      const t = i / 10;
+      const r = Math.sin(t * Math.PI) * 0.012;
+      points.push(new THREE.Vector2(r, (t - 0.5) * 0.03));
+    }
+    const gemGeo = new THREE.LatheGeometry(points, 16);
+    const gemMat = new THREE.MeshPhysicalMaterial({
+      color: color,
+      metalness: 0.1,
+      roughness: 0.05,
+      transmission: 0.7,
+      thickness: 0.5,
+      transparent: true,
+      opacity: 0.9,
+      envMapIntensity: 2.0
+    });
+    const gem = new THREE.Mesh(gemGeo, gemMat);
+    gem.position.y = -0.025;
+    group.add(gem);
+
+    // Gold stud top
+    const studGeo = new THREE.SphereGeometry(0.008, 12, 12);
+    const studMat = new THREE.MeshPhysicalMaterial({
+      color: 0xC9A84C,
+      metalness: 0.95,
+      roughness: 0.05,
+      envMapIntensity: 1.5
+    });
+    const stud = new THREE.Mesh(studGeo, studMat);
+    stud.position.y = 0;
+    group.add(stud);
+
+    // Thin chain/wire
+    const wireGeo = new THREE.CylinderGeometry(0.001, 0.001, 0.02, 6);
+    const wireMat = new THREE.MeshPhysicalMaterial({color:0xC9A84C, metalness:0.9, roughness:0.1});
+    const wire = new THREE.Mesh(wireGeo, wireMat);
+    wire.position.y = -0.01;
+    group.add(wire);
+
+    return group;
+  }
+
+  // Anchor to ear landmarks
+  // Left ear lobe = landmark 127, Right ear lobe = landmark 356
+  const anchorLeft = mindarThree.addAnchor(127);
+  const anchorRight = mindarThree.addAnchor(356);
+
+  earringLeft = createEarring(products[currentProduct].color);
+  earringRight = createEarring(products[currentProduct].color);
+
+  earringLeft.scale.set(8, 8, 8);
+  earringRight.scale.set(8, 8, 8);
+
+  anchorLeft.group.add(earringLeft);
+  anchorRight.group.add(earringRight);
+
+  // Face detection events
+  mindarThree.on('faceLost', () => {
+    faceDetected = false;
+    document.getElementById('status-dot').classList.add('searching');
+    document.getElementById('status-text').textContent = 'Searching for face...';
+    document.getElementById('face-guide').classList.remove('hide');
+  });
+
+  mindarThree.on('faceFound', () => {
+    faceDetected = true;
+    document.getElementById('status-dot').classList.remove('searching');
+    document.getElementById('status-text').textContent = 'Face tracked · 60fps';
+    document.getElementById('face-guide').classList.add('hide');
+    if(!arStarted) {
+      arStarted = true;
+      showToast('✦ Earrings on! Move your head to see them');
+    }
+  });
+
+  // Render loop with swing animation
+  let clock = new THREE.Clock();
+  renderer.setAnimationLoop(() => {
+    const t = clock.getElapsedTime();
+    if(faceDetected && earringLeft && earringRight) {
+      // Gentle swing animation
+      const swing = Math.sin(t * 2) * 0.05;
+      earringLeft.rotation.z = swing;
+      earringRight.rotation.z = -swing;
+    }
+    mindarThree.renderer.render(scene, camera);
+  });
+
+  mindarThree.start().then(() => {
+    showToast('✦ AR camera ready');
+  }).catch(err => {
+    console.error(err);
+    showToast('Camera error — try refreshing');
+  });
+}
+
+function switchProduct(idx, el) {
+  currentProduct = idx;
+  document.querySelectorAll('.strip-item').forEach(i => i.classList.remove('active'));
+  el.classList.add('active');
+
+  // Update product card
+  const p = products[idx];
+  document.getElementById('pc-emoji').textContent = p.emoji;
+  document.getElementById('pc-name').textContent = p.name;
+  document.getElementById('pc-price').textContent = p.price;
+
+  // Update earring color
+  if(earringLeft && earringRight) {
+    const updateColor = (group) => {
+      group.children.forEach(child => {
+        if(child.material && child.material.color) {
+          if(child.material.transmission) {
+            child.material.color.setHex(p.color);
+          }
+        }
+      });
+    };
+    updateColor(earringLeft);
+    updateColor(earringRight);
+  }
+  showToast('✦ ' + p.name);
+}
+
+function stopAR() {
+  if(mindarThree) {
+    mindarThree.stop();
+    mindarThree.renderer.setAnimationLoop(null);
+  }
+  document.getElementById('ui-overlay').classList.remove('active');
+  document.getElementById('ar-container').innerHTML = '';
+  document.getElementById('start-screen').classList.remove('hide');
+  document.getElementById('face-guide').classList.remove('hide');
+  arStarted = false;
+  faceDetected = false;
+  earringLeft = null;
+  earringRight = null;
+}
+
+let productCardVisible = true;
+function toggleProductCard() {
+  productCardVisible = !productCardVisible;
+  document.getElementById('product-card').classList.toggle('hide', !productCardVisible);
+}
+
+function setMode(mode, btn) {
+  document.querySelectorAll('.mode-btn').forEach(b => b.classList.remove('active'));
+  if(btn) btn.classList.add('active');
+  if(mode === 'photo') {
+    document.getElementById('photo-mode').classList.add('active');
+    document.getElementById('ui-overlay').classList.remove('active');
+  } else {
+    document.getElementById('photo-mode').classList.remove('active');
+    document.getElementById('ui-overlay').classList.add('active');
+  }
+}
+
+function savePhoto() {
+  showToast('💾 Look saved to your gallery!');
+}
+
+function shareProduct() {
+  if(navigator.share) {
+    navigator.share({
+      title: 'Check out this jewelry on Lookora!',
+      text: products[currentProduct].name + ' — ' + products[currentProduct].price,
+      url: window.location.href
+    });
+  } else {
+    navigator.clipboard.writeText(window.location.href).then(() => {
+      showToast('🔗 Link copied to clipboard!');
+    });
+  }
+}
+
+function previewPhoto(input) {
+  const file = input.files[0];
+  if(!file) return;
+  const url = URL.createObjectURL(file);
+  const preview = document.getElementById('photo-preview');
+  preview.src = url;
+  preview.style.display = 'block';
+  document.querySelector('.photo-upload-area').style.display = 'none';
+}
+
+let toastTimer;
+function showToast(msg) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => t.classList.remove('show'), 2500);
+}
+</script>
+</body>
+</html>
