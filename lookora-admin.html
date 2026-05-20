@@ -1,0 +1,933 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Lookora — Designer Admin Console</title>
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,500;0,600;1,400;1,500&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
+<style>
+:root{
+  --gold:#C9A84C;--gold-light:#E8C97A;--gold-dark:#9A7A2E;
+  --gold-tint:rgba(201,168,76,0.08);--gold-border:rgba(201,168,76,0.25);
+  --bg:#0F0E0C;--bg2:#161410;--bg3:#1E1B16;--bg4:#252219;
+  --surface:#1A1714;--surface2:#221F19;--surface3:#2A261F;
+  --border:rgba(255,255,255,0.07);--border2:rgba(255,255,255,0.12);
+  --text:#F5F0E8;--text2:#A89880;--text3:#6B5E4E;
+  --radius:12px;--radius-sm:8px;--radius-full:100px;
+  --success:#4CAF50;--danger:#E25C5C;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{height:100%;overflow:hidden}
+body{font-family:'DM Sans',sans-serif;color:var(--text);background:var(--bg);-webkit-font-smoothing:antialiased}
+h1,h2,h3,h4{font-family:'Cormorant Garamond',serif;font-weight:500}
+
+/* SHELL */
+.shell{display:grid;grid-template-columns:220px 1fr;grid-template-rows:56px 1fr;height:100vh}
+
+/* TOPBAR */
+.topbar{
+  grid-column:1/-1;
+  display:flex;align-items:center;justify-content:space-between;
+  padding:0 24px;
+  background:var(--bg2);
+  border-bottom:1px solid var(--border);
+  position:relative;z-index:10;
+}
+.logo{display:flex;align-items:center;gap:10px}
+.logo-mark{width:30px;height:30px;background:var(--gold);border-radius:7px;display:flex;align-items:center;justify-content:center;flex-shrink:0}
+.logo-mark svg{width:16px;height:16px;fill:none;stroke:white;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+.logo-name{font-family:'Cormorant Garamond',serif;font-size:20px;font-weight:600;color:var(--text);letter-spacing:.02em}
+.topbar-center{display:flex;align-items:center;gap:8px}
+.search-wrap{display:flex;align-items:center;gap:8px;background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-full);padding:7px 14px;width:240px}
+.search-wrap svg{width:15px;height:15px;stroke:var(--text3);flex-shrink:0}
+.search-wrap input{background:transparent;border:none;outline:none;font-family:'DM Sans',sans-serif;font-size:13px;color:var(--text);width:100%}
+.search-wrap input::placeholder{color:var(--text3)}
+.topbar-right{display:flex;align-items:center;gap:12px}
+.plan-badge{padding:4px 12px;border-radius:var(--radius-full);border:1px solid var(--gold-border);background:var(--gold-tint);font-size:11px;font-weight:500;color:var(--gold);letter-spacing:.04em}
+.avatar{width:32px;height:32px;border-radius:50%;background:var(--gold);display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:500;color:var(--bg);cursor:pointer}
+.notif-btn{width:32px;height:32px;border-radius:50%;border:1px solid var(--border);background:transparent;display:flex;align-items:center;justify-content:center;cursor:pointer;position:relative}
+.notif-btn svg{width:16px;height:16px;stroke:var(--text2)}
+.notif-dot{position:absolute;top:6px;right:6px;width:7px;height:7px;border-radius:50%;background:var(--gold);border:2px solid var(--bg2)}
+
+/* SIDEBAR */
+.sidebar{
+  background:var(--bg2);
+  border-right:1px solid var(--border);
+  padding:20px 0;
+  overflow-y:auto;
+  display:flex;flex-direction:column;
+}
+.designer-info{padding:0 16px 20px;border-bottom:1px solid var(--border);margin-bottom:12px}
+.designer-name{font-size:14px;font-weight:500;color:var(--text);margin-bottom:2px}
+.designer-handle{font-size:12px;color:var(--text3)}
+.live-dot{display:inline-flex;align-items:center;gap:5px;font-size:11px;color:var(--success);margin-top:6px}
+.live-dot::before{content:'';width:6px;height:6px;border-radius:50%;background:var(--success);animation:pulse 2s infinite}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.4}}
+
+.nav-group{margin-bottom:4px}
+.nav-label{padding:6px 16px;font-size:10px;letter-spacing:.08em;text-transform:uppercase;color:var(--text3);font-weight:500}
+.nav-item{
+  display:flex;align-items:center;gap:10px;
+  padding:9px 16px;font-size:13px;cursor:pointer;
+  color:var(--text2);transition:all .15s;
+  border-left:2px solid transparent;
+}
+.nav-item svg{width:16px;height:16px;stroke:currentColor;flex-shrink:0}
+.nav-item:hover{color:var(--text);background:var(--surface)}
+.nav-item.active{color:var(--gold);background:var(--gold-tint);border-left-color:var(--gold);border-radius:0 var(--radius-sm) var(--radius-sm) 0}
+.nav-badge{margin-left:auto;background:var(--gold);color:var(--bg);font-size:10px;font-weight:500;padding:1px 7px;border-radius:var(--radius-full)}
+
+.sidebar-footer{margin-top:auto;padding:16px;border-top:1px solid var(--border)}
+.upgrade-card{background:var(--gold-tint);border:1px solid var(--gold-border);border-radius:var(--radius);padding:14px}
+.upgrade-card p{font-size:12px;color:var(--text2);margin-bottom:10px;line-height:1.5}
+.upgrade-btn{width:100%;padding:8px;background:var(--gold);color:var(--bg);border:none;border-radius:var(--radius-full);font-family:'DM Sans',sans-serif;font-size:12px;font-weight:500;cursor:pointer}
+
+/* MAIN */
+.main{background:var(--bg3);overflow-y:auto;display:flex;flex-direction:column}
+.panel{display:none;flex-direction:column;height:100%}
+.panel.active{display:flex}
+.panel-header{
+  padding:24px 28px 0;
+  display:flex;align-items:flex-start;justify-content:space-between;
+  flex-shrink:0;
+}
+.panel-title{font-size:26px;letter-spacing:-.01em;color:var(--text);margin-bottom:4px}
+.panel-sub{font-size:13px;color:var(--text3)}
+.panel-actions{display:flex;gap:8px;align-items:center}
+.btn{
+  display:flex;align-items:center;gap:6px;
+  padding:8px 16px;border-radius:var(--radius-full);
+  font-family:'DM Sans',sans-serif;font-size:13px;cursor:pointer;transition:all .2s;
+}
+.btn svg{width:15px;height:15px;stroke:currentColor}
+.btn-outline{background:transparent;border:1px solid var(--border2);color:var(--text2)}
+.btn-outline:hover{border-color:var(--gold-border);color:var(--gold)}
+.btn-gold{background:var(--gold);border:none;color:var(--bg);font-weight:500}
+.btn-gold:hover{background:var(--gold-light)}
+.panel-content{padding:20px 28px 28px;overflow-y:auto;flex:1}
+
+/* STATS ROW */
+.stats-row{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:20px}
+.stat-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:16px}
+.stat-card-val{font-family:'Cormorant Garamond',serif;font-size:28px;font-weight:600;color:var(--gold);margin-bottom:2px}
+.stat-card-label{font-size:12px;color:var(--text3)}
+.stat-card-change{font-size:11px;color:var(--success);margin-top:4px}
+
+/* SECTION LABEL */
+.sec-label{font-size:11px;letter-spacing:.06em;text-transform:uppercase;color:var(--text3);font-weight:500;margin-bottom:12px;margin-top:24px}
+.sec-label:first-child{margin-top:0}
+
+/* CATEGORY TABS */
+.cat-tabs{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:20px}
+.cat-tab{
+  display:flex;align-items:center;gap:7px;
+  padding:7px 14px;border-radius:var(--radius-full);
+  border:1px solid var(--border);background:var(--surface);
+  font-size:12px;cursor:pointer;color:var(--text2);transition:all .2s;
+}
+.cat-tab svg{width:14px;height:14px;stroke:currentColor}
+.cat-tab:hover{border-color:var(--border2);color:var(--text)}
+.cat-tab.active{border-color:var(--gold-border);background:var(--gold-tint);color:var(--gold)}
+.cat-count{font-size:10px;background:var(--surface3);padding:1px 6px;border-radius:10px}
+.cat-tab.active .cat-count{background:rgba(201,168,76,0.2);color:var(--gold)}
+
+/* GLB GRID */
+.glb-upload{
+  border:1px dashed var(--border2);border-radius:var(--radius);
+  padding:28px;text-align:center;cursor:pointer;margin-bottom:20px;
+  transition:border-color .2s,background .2s;
+}
+.glb-upload:hover{border-color:var(--gold-border);background:var(--gold-tint)}
+.glb-upload svg{width:28px;height:28px;stroke:var(--text3);margin:0 auto 10px;display:block}
+.glb-upload p{font-size:13px;color:var(--text2);margin-bottom:4px}
+.glb-upload span{font-size:11px;color:var(--text3)}
+.glb-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:12px}
+.glb-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);overflow:hidden;cursor:pointer;transition:border-color .2s}
+.glb-card:hover{border-color:var(--border2)}
+.glb-thumb{height:100px;display:flex;align-items:center;justify-content:center;background:var(--surface2)}
+.glb-thumb svg{width:32px;height:32px;stroke:var(--gold);opacity:.5}
+.glb-info{padding:12px}
+.glb-name{font-size:13px;font-weight:500;color:var(--text);margin-bottom:4px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.glb-meta{font-size:11px;color:var(--text3)}
+.glb-status{display:inline-flex;align-items:center;gap:4px;font-size:10px;font-weight:500;padding:2px 8px;border-radius:10px;margin-top:6px}
+.glb-status.live{background:rgba(76,175,80,.15);color:var(--success)}
+.glb-status.draft{background:var(--surface3);color:var(--text3)}
+.glb-actions{display:flex;gap:6px;margin-top:10px}
+.icon-btn{width:28px;height:28px;border-radius:6px;border:1px solid var(--border);background:transparent;display:flex;align-items:center;justify-content:center;cursor:pointer;transition:all .2s}
+.icon-btn svg{width:13px;height:13px;stroke:var(--text3)}
+.icon-btn:hover{border-color:var(--border2);background:var(--surface2)}
+.icon-btn:hover svg{stroke:var(--text)}
+
+/* MATERIAL CONTROLS */
+.mat-grid{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+.mat-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:20px}
+.mat-card-title{font-size:13px;font-weight:500;color:var(--text);margin-bottom:16px;display:flex;align-items:center;gap:8px}
+.mat-card-title svg{width:15px;height:15px;stroke:var(--gold)}
+.preview-sphere{width:80px;height:80px;border-radius:50%;margin:0 auto 16px;transition:all .4s;border:2px solid rgba(255,255,255,.05)}
+.color-swatches{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-bottom:16px}
+.swatch{height:36px;border-radius:var(--radius-sm);cursor:pointer;border:2px solid transparent;transition:all .2s}
+.swatch:hover{transform:scale(1.05)}
+.swatch.selected{border-color:white}
+.range-row{display:flex;align-items:center;gap:10px;margin-bottom:10px}
+.range-row label{font-size:12px;color:var(--text3);width:100px;flex-shrink:0}
+.range-row input[type=range]{flex:1;accent-color:var(--gold)}
+.range-row .val{font-size:12px;font-weight:500;color:var(--text);width:36px;text-align:right}
+.range-row select{flex:1;padding:6px 10px;background:var(--surface2);border:1px solid var(--border);border-radius:var(--radius-sm);color:var(--text);font-family:'DM Sans',sans-serif;font-size:12px;outline:none}
+.gem-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:8px;margin-bottom:14px}
+.gem-opt{background:var(--surface2);border:1px solid var(--border);border-radius:var(--radius-sm);padding:10px;cursor:pointer;transition:all .2s;text-align:center}
+.gem-opt:hover{border-color:var(--border2)}
+.gem-opt.selected{border-color:var(--gold-border);background:var(--gold-tint)}
+.gem-swatch{width:24px;height:24px;border-radius:4px;margin:0 auto 6px;transform:rotate(45deg)}
+.gem-label{font-size:11px;font-weight:500;color:var(--text)}
+.gem-sub{font-size:10px;color:var(--text3);margin-top:2px}
+
+/* HDRI */
+.hdri-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:16px}
+.hdri-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);overflow:hidden;cursor:pointer;transition:all .2s}
+.hdri-card:hover{border-color:var(--border2)}
+.hdri-card.selected{border-color:var(--gold);border-width:1.5px}
+.hdri-thumb{height:56px;display:flex;align-items:center;justify-content:center;font-size:11px;color:var(--text3)}
+.hdri-name{font-size:12px;font-weight:500;color:var(--text);padding:8px 10px 10px;border-top:1px solid var(--border)}
+.hdri-upload{border:1px dashed var(--border2);border-radius:var(--radius);padding:16px;text-align:center;cursor:pointer;transition:all .2s}
+.hdri-upload:hover{border-color:var(--gold-border);background:var(--gold-tint)}
+.hdri-upload svg{width:20px;height:20px;stroke:var(--text3);margin:0 auto 6px;display:block}
+.hdri-upload p{font-size:12px;color:var(--text2)}
+.hdri-upload span{font-size:11px;color:var(--text3)}
+
+/* ANALYTICS */
+.chart-area{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:20px;margin-bottom:16px}
+.chart-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:16px}
+.chart-title{font-size:13px;font-weight:500;color:var(--text)}
+.chart-legend{display:flex;gap:16px}
+.legend-item{display:flex;align-items:center;gap:6px;font-size:11px;color:var(--text3)}
+.legend-dot{width:8px;height:8px;border-radius:50%}
+.bar-chart{display:flex;align-items:flex-end;gap:6px;height:100px}
+.bar-wrap{flex:1;display:flex;flex-direction:column;align-items:center;gap:4px}
+.bar{width:100%;border-radius:4px 4px 0 0;transition:all .3s;cursor:pointer}
+.bar:hover{opacity:.8}
+.bar-label{font-size:10px;color:var(--text3);white-space:nowrap}
+.top-items{display:flex;flex-direction:column;gap:8px}
+.top-item{display:flex;align-items:center;gap:12px;padding:10px 14px;background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-sm)}
+.top-item-rank{font-family:'Cormorant Garamond',serif;font-size:18px;color:var(--gold);width:20px;text-align:center;flex-shrink:0}
+.top-item-info{flex:1}
+.top-item-name{font-size:13px;font-weight:500;color:var(--text)}
+.top-item-meta{font-size:11px;color:var(--text3);margin-top:2px}
+.top-item-val{font-size:13px;font-weight:500;color:var(--text)}
+.progress-bar-bg{background:var(--surface3);border-radius:4px;height:4px;margin-top:6px}
+.progress-bar{background:var(--gold);border-radius:4px;height:4px;transition:width .5s}
+
+/* EMBED */
+.embed-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:20px;margin-bottom:16px}
+.code-block{background:var(--bg);border:1px solid var(--border);border-radius:var(--radius-sm);padding:14px;font-family:monospace;font-size:12px;color:var(--text2);line-height:1.7;word-break:break-all;margin-bottom:12px}
+.code-block .tag{color:#C9A84C}
+.code-block .attr{color:#7DBFEC}
+.code-block .val{color:#95D16A}
+.qr-placeholder{width:100px;height:100px;background:var(--surface2);border-radius:var(--radius-sm);display:flex;align-items:center;justify-content:center}
+.qr-placeholder svg{width:40px;height:40px;stroke:var(--text3)}
+.link-row{display:flex;gap:8px;align-items:center}
+.link-input{flex:1;padding:9px 14px;background:var(--surface2);border:1px solid var(--border);border-radius:var(--radius-full);font-size:12px;color:var(--text2);font-family:monospace;outline:none}
+
+/* OVERVIEW GRID */
+.overview-grid{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-top:20px}
+.overview-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:20px;cursor:pointer;transition:all .2s}
+.overview-card:hover{border-color:var(--border2)}
+.overview-card-icon{width:40px;height:40px;border-radius:var(--radius-sm);background:var(--gold-tint);border:1px solid var(--gold-border);display:flex;align-items:center;justify-content:center;margin-bottom:14px}
+.overview-card-icon svg{width:20px;height:20px;stroke:var(--gold)}
+.overview-card h3{font-family:'DM Sans',sans-serif;font-size:14px;font-weight:500;color:var(--text);margin-bottom:4px}
+.overview-card p{font-size:12px;color:var(--text3);line-height:1.6}
+.overview-card .arrow{font-size:12px;color:var(--gold);margin-top:12px;display:block}
+.preview-widget{background:var(--bg);border:1px solid var(--border);border-radius:var(--radius);padding:20px;text-align:center;margin-top:20px}
+.preview-widget svg.cam{width:32px;height:32px;stroke:var(--text3);margin:0 auto 10px;display:block}
+.preview-widget p{font-size:13px;color:var(--text3);margin-bottom:12px}
+</style>
+
+<div class="shell">
+
+<!-- TOPBAR -->
+<header class="topbar">
+  <div class="logo">
+    <div class="logo-mark">
+      <svg viewBox="0 0 24 24"><path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/></svg>
+    </div>
+    <span class="logo-name">Lookora</span>
+  </div>
+  <div class="topbar-center">
+    <div class="search-wrap">
+      <svg viewBox="0 0 24 24" fill="none" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
+      <input type="text" placeholder="Search products, settings...">
+    </div>
+  </div>
+  <div class="topbar-right">
+    <span class="plan-badge">✦ Pro plan</span>
+    <div class="notif-btn">
+      <svg viewBox="0 0 24 24" fill="none" stroke-width="2"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>
+      <div class="notif-dot"></div>
+    </div>
+    <div class="avatar">JD</div>
+  </div>
+</header>
+
+<!-- SIDEBAR -->
+<aside class="sidebar">
+  <div class="designer-info">
+    <div class="designer-name">Jiya Designs</div>
+    <div class="designer-handle">@jiyadesigns</div>
+    <div class="live-dot">Try-on widget live</div>
+  </div>
+
+  <div class="nav-group">
+    <div class="nav-label">Workspace</div>
+    <div class="nav-item active" onclick="switchPanel('overview',this)">
+      <svg viewBox="0 0 24 24" fill="none" stroke-width="1.5"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/></svg>
+      Overview
+    </div>
+    <div class="nav-item" onclick="switchPanel('catalog',this)">
+      <svg viewBox="0 0 24 24" fill="none" stroke-width="1.5"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/></svg>
+      Product catalog
+      <span class="nav-badge">12</span>
+    </div>
+  </div>
+
+  <div class="nav-group">
+    <div class="nav-label">Materials</div>
+    <div class="nav-item" onclick="switchPanel('gold',this)">
+      <svg viewBox="0 0 24 24" fill="none" stroke-width="1.5"><circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="3"/></svg>
+      Gold settings
+    </div>
+    <div class="nav-item" onclick="switchPanel('diamond',this)">
+      <svg viewBox="0 0 24 24" fill="none" stroke-width="1.5"><polygon points="12 2 22 9 18 21 6 21 2 9"/></svg>
+      Diamond & gems
+    </div>
+  </div>
+
+  <div class="nav-group">
+    <div class="nav-label">Lighting</div>
+    <div class="nav-item" onclick="switchPanel('hdri',this)">
+      <svg viewBox="0 0 24 24" fill="none" stroke-width="1.5"><circle cx="12" cy="12" r="5"/><path d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42"/></svg>
+      HDRI environments
+    </div>
+  </div>
+
+  <div class="nav-group">
+    <div class="nav-label">Insights</div>
+    <div class="nav-item" onclick="switchPanel('analytics',this)">
+      <svg viewBox="0 0 24 24" fill="none" stroke-width="1.5"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>
+      Analytics
+    </div>
+  </div>
+
+  <div class="nav-group">
+    <div class="nav-label">Publish</div>
+    <div class="nav-item" onclick="switchPanel('embed',this)">
+      <svg viewBox="0 0 24 24" fill="none" stroke-width="1.5"><polyline points="16 18 22 12 16 6"/><polyline points="8 6 2 12 8 18"/></svg>
+      Embed & share
+    </div>
+    <div class="nav-item" onclick="switchPanel('brand',this)">
+      <svg viewBox="0 0 24 24" fill="none" stroke-width="1.5"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+      Branding
+    </div>
+  </div>
+
+  <div class="sidebar-footer">
+    <div class="upgrade-card">
+      <p>Unlock unlimited products & white-label branding on Studio plan</p>
+      <button class="upgrade-btn">Upgrade to Studio</button>
+    </div>
+  </div>
+</aside>
+
+<!-- MAIN CONTENT -->
+<main class="main">
+
+  <!-- OVERVIEW -->
+  <div id="panel-overview" class="panel active">
+    <div class="panel-header">
+      <div>
+        <h2 class="panel-title">Good morning, Jiya ✦</h2>
+        <div class="panel-sub">Here's how your try-on studio is performing today</div>
+      </div>
+      <div class="panel-actions">
+        <button class="btn btn-outline" onclick="switchPanel('embed',document.querySelector('[onclick*=embed]'))">
+          <svg viewBox="0 0 24 24" fill="none" stroke-width="1.5"><polyline points="16 18 22 12 16 6"/><polyline points="8 6 2 12 8 18"/></svg>
+          Get embed code
+        </button>
+        <button class="btn btn-gold" onclick="switchPanel('catalog',document.querySelector('[onclick*=catalog]'))">
+          <svg viewBox="0 0 24 24" fill="none" stroke-width="1.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+          Upload GLB
+        </button>
+      </div>
+    </div>
+    <div class="panel-content">
+      <div class="stats-row">
+        <div class="stat-card">
+          <div class="stat-card-val">847</div>
+          <div class="stat-card-label">Try-ons this month</div>
+          <div class="stat-card-change">↑ 24% vs last month</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-card-val">12</div>
+          <div class="stat-card-label">Products live</div>
+          <div class="stat-card-change">3 categories active</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-card-val">34%</div>
+          <div class="stat-card-label">Conversion lift</div>
+          <div class="stat-card-change">↑ 8% this week</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-card-val">218</div>
+          <div class="stat-card-label">Shares & saves</div>
+          <div class="stat-card-change">↑ 41% vs last month</div>
+        </div>
+      </div>
+
+      <div class="overview-grid">
+        <div class="overview-card" onclick="switchPanel('gold',document.querySelector('[onclick*=gold]'))">
+          <div class="overview-card-icon"><svg viewBox="0 0 24 24" fill="none" stroke-width="1.5"><circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="3"/></svg></div>
+          <h3>Gold settings</h3>
+          <p>Adjust metal color, finish, reflectivity for your entire catalog in one place.</p>
+          <span class="arrow">Yellow gold · Mirror polish →</span>
+        </div>
+        <div class="overview-card" onclick="switchPanel('diamond',document.querySelector('[onclick*=diamond]'))">
+          <div class="overview-card-icon"><svg viewBox="0 0 24 24" fill="none" stroke-width="1.5"><polygon points="12 2 22 9 18 21 6 21 2 9"/></svg></div>
+          <h3>Diamond & gems</h3>
+          <p>Control cut grade, clarity, fire and brilliance. Photorealistic gem rendering.</p>
+          <span class="arrow">Ideal cut · D colorless →</span>
+        </div>
+        <div class="overview-card" onclick="switchPanel('hdri',document.querySelector('[onclick*=hdri]'))">
+          <div class="overview-card-icon"><svg viewBox="0 0 24 24" fill="none" stroke-width="1.5"><circle cx="12" cy="12" r="5"/><path d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2"/></svg></div>
+          <h3>HDRI lighting</h3>
+          <p>Upload your own environment maps. Studio, golden hour, showroom — your pick.</p>
+          <span class="arrow">Studio soft · 75% intensity →</span>
+        </div>
+        <div class="overview-card" onclick="switchPanel('analytics',document.querySelector('[onclick*=analytics]'))">
+          <div class="overview-card-icon"><svg viewBox="0 0 24 24" fill="none" stroke-width="1.5"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg></div>
+          <h3>Analytics</h3>
+          <p>See which products get tried on most, which convert, which need attention.</p>
+          <span class="arrow">847 sessions this month →</span>
+        </div>
+      </div>
+
+      <div class="preview-widget">
+        <svg class="cam" viewBox="0 0 24 24" fill="none" stroke-width="1.5"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg>
+        <p>Live AR preview uses your current material + HDRI settings</p>
+        <button class="btn btn-gold" style="margin:0 auto;display:flex">
+          <svg viewBox="0 0 24 24" fill="none" stroke-width="1.5" style="width:15px;height:15px;stroke:currentColor"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg>
+          Open live camera preview
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- CATALOG -->
+  <div id="panel-catalog" class="panel">
+    <div class="panel-header">
+      <div>
+        <h2 class="panel-title">Product catalog</h2>
+        <div class="panel-sub">Manage your 3D jewelry files by category</div>
+      </div>
+      <div class="panel-actions">
+        <button class="btn btn-gold">
+          <svg viewBox="0 0 24 24" fill="none" stroke-width="1.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+          Upload GLB file
+        </button>
+      </div>
+    </div>
+    <div class="panel-content">
+      <div class="cat-tabs">
+        <div class="cat-tab active" onclick="selectCatTab(this)">
+          <svg viewBox="0 0 24 24" fill="none" stroke-width="1.5"><polygon points="12 2 22 9 18 21 6 21 2 9"/></svg>
+          All <span class="cat-count">12</span>
+        </div>
+        <div class="cat-tab" onclick="selectCatTab(this)">
+          <svg viewBox="0 0 24 24" fill="none" stroke-width="1.5"><circle cx="12" cy="12" r="5"/><path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2"/></svg>
+          Earrings <span class="cat-count">6</span>
+        </div>
+        <div class="cat-tab" onclick="selectCatTab(this)">
+          <svg viewBox="0 0 24 24" fill="none" stroke-width="1.5"><circle cx="12" cy="12" r="9"/></svg>
+          Rings <span class="cat-count">3</span>
+        </div>
+        <div class="cat-tab" onclick="selectCatTab(this)">
+          <svg viewBox="0 0 24 24" fill="none" stroke-width="1.5"><path d="M4 9h16M4 15h16M10 3 8 21M14 3l2 18"/></svg>
+          Necklaces <span class="cat-count">2</span>
+        </div>
+        <div class="cat-tab" onclick="selectCatTab(this)">
+          <svg viewBox="0 0 24 24" fill="none" stroke-width="1.5"><path d="M6 2v6a6 6 0 0 0 12 0V2"/></svg>
+          Bracelets <span class="cat-count">1</span>
+        </div>
+        <div class="cat-tab" onclick="selectCatTab(this)">Bangles</div>
+        <div class="cat-tab" onclick="selectCatTab(this)">Nose pins</div>
+        <div class="cat-tab" onclick="selectCatTab(this)">Watches</div>
+        <div class="cat-tab" onclick="selectCatTab(this)">Brooches</div>
+        <div class="cat-tab" onclick="selectCatTab(this)">Eyeglasses</div>
+      </div>
+
+      <div class="glb-upload">
+        <svg viewBox="0 0 24 24" fill="none" stroke-width="1.5"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+        <p>Drag & drop your GLB files here</p>
+        <span>Max 6MB per file · .glb format · Materials auto-applied from your settings</span>
+      </div>
+
+      <div class="glb-grid">
+        <div class="glb-card">
+          <div class="glb-thumb"><svg viewBox="0 0 24 24" fill="none" stroke-width="1"><polygon points="12 2 22 9 18 21 6 21 2 9"/></svg></div>
+          <div class="glb-info">
+            <div class="glb-name">Diamond drop earrings</div>
+            <div class="glb-meta">earring_diamond_drop.glb · 2.4 MB</div>
+            <div class="glb-status live">● Live</div>
+            <div class="glb-actions">
+              <div class="icon-btn"><svg viewBox="0 0 24 24" fill="none" stroke-width="1.5"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg></div>
+              <div class="icon-btn"><svg viewBox="0 0 24 24" fill="none" stroke-width="1.5"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg></div>
+              <div class="icon-btn"><svg viewBox="0 0 24 24" fill="none" stroke-width="1.5"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/></svg></div>
+            </div>
+          </div>
+        </div>
+        <div class="glb-card">
+          <div class="glb-thumb"><svg viewBox="0 0 24 24" fill="none" stroke-width="1"><circle cx="12" cy="12" r="9"/></svg></div>
+          <div class="glb-info">
+            <div class="glb-name">Gold hoop earrings</div>
+            <div class="glb-meta">earring_gold_hoop.glb · 1.8 MB</div>
+            <div class="glb-status live">● Live</div>
+            <div class="glb-actions">
+              <div class="icon-btn"><svg viewBox="0 0 24 24" fill="none" stroke-width="1.5"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg></div>
+              <div class="icon-btn"><svg viewBox="0 0 24 24" fill="none" stroke-width="1.5"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg></div>
+              <div class="icon-btn"><svg viewBox="0 0 24 24" fill="none" stroke-width="1.5"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/></svg></div>
+            </div>
+          </div>
+        </div>
+        <div class="glb-card">
+          <div class="glb-thumb"><svg viewBox="0 0 24 24" fill="none" stroke-width="1"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg></div>
+          <div class="glb-info">
+            <div class="glb-name">Ruby stud earrings</div>
+            <div class="glb-meta">earring_ruby_stud.glb · 3.1 MB</div>
+            <div class="glb-status draft">○ Draft</div>
+            <div class="glb-actions">
+              <div class="icon-btn"><svg viewBox="0 0 24 24" fill="none" stroke-width="1.5"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg></div>
+              <div class="icon-btn"><svg viewBox="0 0 24 24" fill="none" stroke-width="1.5"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg></div>
+              <div class="icon-btn"><svg viewBox="0 0 24 24" fill="none" stroke-width="1.5"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/></svg></div>
+            </div>
+          </div>
+        </div>
+        <div class="glb-card" style="border:1px dashed var(--border2);background:transparent;cursor:pointer;display:flex;align-items:center;justify-content:center;min-height:180px">
+          <div style="text-align:center">
+            <svg viewBox="0 0 24 24" fill="none" stroke-width="1.5" style="width:24px;height:24px;stroke:var(--text3);margin:0 auto 8px;display:block"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+            <div style="font-size:12px;color:var(--text3)">Add product</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- GOLD SETTINGS -->
+  <div id="panel-gold" class="panel">
+    <div class="panel-header">
+      <div>
+        <h2 class="panel-title">Gold settings</h2>
+        <div class="panel-sub">Control metal color, finish, and surface properties</div>
+      </div>
+      <div class="panel-actions">
+        <button class="btn btn-outline" onclick="resetGold()">Reset to default</button>
+        <button class="btn btn-gold" onclick="saveMsg(this)">Save changes</button>
+      </div>
+    </div>
+    <div class="panel-content">
+      <div class="mat-grid">
+        <div class="mat-card">
+          <div class="mat-card-title">
+            <svg viewBox="0 0 24 24" fill="none" stroke-width="1.5"><circle cx="12" cy="12" r="9"/></svg>
+            Metal color
+          </div>
+          <div id="gold-sphere" class="preview-sphere" style="background:radial-gradient(circle at 35% 35%, #F5D98A, #C9A84C 50%, #7A5820)"></div>
+          <div class="color-swatches">
+            <div class="swatch selected" style="background:linear-gradient(135deg,#F5D98A,#C9A84C,#7A5820)" onclick="setGold('yellow',this)" title="Yellow gold"></div>
+            <div class="swatch" style="background:linear-gradient(135deg,#F0F0F0,#C8C8C8,#888)" onclick="setGold('white',this)" title="White gold"></div>
+            <div class="swatch" style="background:linear-gradient(135deg,#F5C4A8,#E8A080,#9A5040)" onclick="setGold('rose',this)" title="Rose gold"></div>
+            <div class="swatch" style="background:linear-gradient(135deg,#E8E0C0,#C8B860,#786820)" onclick="setGold('green',this)" title="Green gold"></div>
+          </div>
+          <div style="display:flex;align-items:center;gap:8px;margin-bottom:14px">
+            <span style="font-size:12px;color:var(--text3)">Custom hex</span>
+            <input type="color" id="custom-gold" value="#C9A84C" style="width:36px;height:28px;border:1px solid var(--border);border-radius:6px;background:transparent;cursor:pointer;padding:2px" onchange="applyCustomGold(this.value)">
+            <span id="gold-hex" style="font-size:12px;color:var(--text2);font-family:monospace">#C9A84C</span>
+          </div>
+          <div class="sec-label" style="margin-top:0">Surface finish</div>
+          <div class="range-row"><label>Metalness</label><input type="range" min="0" max="100" value="95" step="1" oninput="updVal('metal-val',this.value+'%')"><span class="val" id="metal-val">95%</span></div>
+          <div class="range-row"><label>Roughness</label><input type="range" min="0" max="100" value="10" step="1" oninput="updVal('rough-val',this.value+'%')"><span class="val" id="rough-val">10%</span></div>
+          <div class="range-row"><label>Reflectivity</label><input type="range" min="0" max="100" value="88" step="1" oninput="updVal('refl-val',this.value+'%')"><span class="val" id="refl-val">88%</span></div>
+          <div class="range-row"><label>Finish type</label><select><option>Mirror polish</option><option>Satin</option><option>Matte</option><option>Hammered</option><option>Brushed</option></select></div>
+        </div>
+        <div class="mat-card">
+          <div class="mat-card-title">
+            <svg viewBox="0 0 24 24" fill="none" stroke-width="1.5"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+            Advanced properties
+          </div>
+          <div class="range-row"><label>Anisotropy</label><input type="range" min="0" max="100" value="20" step="1" oninput="updVal('anis-val',this.value+'%')"><span class="val" id="anis-val">20%</span></div>
+          <div class="range-row"><label>Clearcoat</label><input type="range" min="0" max="100" value="0" step="1" oninput="updVal('coat-val',this.value+'%')"><span class="val" id="coat-val">0%</span></div>
+          <div class="range-row"><label>Sheen</label><input type="range" min="0" max="100" value="0" step="1" oninput="updVal('sheen-val',this.value+'%')"><span class="val" id="sheen-val">0%</span></div>
+          <div class="range-row"><label>IOR</label><input type="range" min="100" max="250" value="145" step="1" oninput="updVal('ior-val',(this.value/100).toFixed(2))"><span class="val" id="ior-val">1.45</span></div>
+          <div class="sec-label">Texture maps</div>
+          <div style="display:flex;flex-direction:column;gap:8px">
+            <div style="display:flex;align-items:center;justify-content:space-between;padding:8px 12px;background:var(--surface2);border-radius:var(--radius-sm)">
+              <span style="font-size:12px;color:var(--text2)">Normal map</span>
+              <button class="btn btn-outline" style="padding:4px 10px;font-size:11px">Upload</button>
+            </div>
+            <div style="display:flex;align-items:center;justify-content:space-between;padding:8px 12px;background:var(--surface2);border-radius:var(--radius-sm)">
+              <span style="font-size:12px;color:var(--text2)">Roughness map</span>
+              <button class="btn btn-outline" style="padding:4px 10px;font-size:11px">Upload</button>
+            </div>
+            <div style="display:flex;align-items:center;justify-content:space-between;padding:8px 12px;background:var(--surface2);border-radius:var(--radius-sm)">
+              <span style="font-size:12px;color:var(--text2)">AO map</span>
+              <button class="btn btn-outline" style="padding:4px 10px;font-size:11px">Upload</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- DIAMOND -->
+  <div id="panel-diamond" class="panel">
+    <div class="panel-header">
+      <div>
+        <h2 class="panel-title">Diamond & gem settings</h2>
+        <div class="panel-sub">Photorealistic gem rendering — cut, clarity, color and optical properties</div>
+      </div>
+      <div class="panel-actions">
+        <button class="btn btn-gold" onclick="saveMsg(this)">Save changes</button>
+      </div>
+    </div>
+    <div class="panel-content">
+      <div class="mat-grid">
+        <div class="mat-card">
+          <div class="mat-card-title">
+            <svg viewBox="0 0 24 24" fill="none" stroke-width="1.5"><polygon points="12 2 22 9 18 21 6 21 2 9"/></svg>
+            Diamonds
+          </div>
+          <div id="gem-sphere" class="preview-sphere" style="background:radial-gradient(circle at 30% 30%, #F0F8FF, rgba(150,210,255,0.6) 50%, rgba(100,170,220,0.3));border:1px solid rgba(150,200,255,.3)"></div>
+          <div class="range-row"><label>Cut grade</label><select onchange="updGem()"><option>Ideal / Excellent</option><option>Very Good</option><option>Good</option><option>Fair</option></select></div>
+          <div class="range-row"><label>Color grade</label><select onchange="updGem()"><option>D – Colorless</option><option>E–F Colorless</option><option>G–H Near colorless</option><option>I–J Near colorless</option></select></div>
+          <div class="range-row"><label>Clarity</label><select onchange="updGem()"><option>IF – Internally Flawless</option><option>VVS1–VVS2</option><option>VS1–VS2</option><option>SI1–SI2</option></select></div>
+          <div class="sec-label">Optical properties</div>
+          <div class="range-row"><label>Fire / dispersion</label><input type="range" min="0" max="100" value="72" step="1" oninput="updVal('fire-val',this.value+'%')"><span class="val" id="fire-val">72%</span></div>
+          <div class="range-row"><label>Brilliance</label><input type="range" min="0" max="100" value="88" step="1" oninput="updVal('brill-val',this.value+'%')"><span class="val" id="brill-val">88%</span></div>
+          <div class="range-row"><label>Scintillation</label><input type="range" min="0" max="100" value="65" step="1" oninput="updVal('scint-val',this.value+'%')"><span class="val" id="scint-val">65%</span></div>
+          <div class="range-row"><label>Refraction index</label><select><option>2.42 — Diamond</option><option>1.77 — Ruby / Sapphire</option><option>1.57 — Emerald</option><option>1.95 — Moissanite</option></select></div>
+        </div>
+        <div class="mat-card">
+          <div class="mat-card-title">
+            <svg viewBox="0 0 24 24" fill="none" stroke-width="1.5"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
+            Colored gemstones
+          </div>
+          <div class="gem-grid">
+            <div class="gem-opt selected" onclick="selectGem(this,'#C0392B','Ruby')">
+              <div class="gem-swatch" style="background:#C0392B"></div>
+              <div class="gem-label">Ruby</div>
+              <div class="gem-sub">Chromium red</div>
+            </div>
+            <div class="gem-opt" onclick="selectGem(this,'#2E4ABA','Sapphire')">
+              <div class="gem-swatch" style="background:#2E4ABA"></div>
+              <div class="gem-label">Sapphire</div>
+              <div class="gem-sub">Royal blue</div>
+            </div>
+            <div class="gem-opt" onclick="selectGem(this,'#27AE60','Emerald')">
+              <div class="gem-swatch" style="background:#27AE60"></div>
+              <div class="gem-label">Emerald</div>
+              <div class="gem-sub">Vivid green</div>
+            </div>
+            <div class="gem-opt" onclick="selectGem(this,'#8E44AD','Amethyst')">
+              <div class="gem-swatch" style="background:#8E44AD"></div>
+              <div class="gem-label">Amethyst</div>
+              <div class="gem-sub">Violet purple</div>
+            </div>
+            <div class="gem-opt" onclick="selectGem(this,'#E67E22','Citrine')">
+              <div class="gem-swatch" style="background:#E67E22"></div>
+              <div class="gem-label">Citrine</div>
+              <div class="gem-sub">Warm amber</div>
+            </div>
+            <div class="gem-opt" onclick="selectGem(this,'#1ABC9C','Aquamarine')">
+              <div class="gem-swatch" style="background:#1ABC9C"></div>
+              <div class="gem-label">Aquamarine</div>
+              <div class="gem-sub">Sea blue-green</div>
+            </div>
+          </div>
+          <div class="range-row"><label>Saturation</label><input type="range" min="0" max="100" value="80" step="1" oninput="updVal('sat-val',this.value+'%')"><span class="val" id="sat-val">80%</span></div>
+          <div class="range-row"><label>Transparency</label><input type="range" min="0" max="100" value="65" step="1" oninput="updVal('trans-val',this.value+'%')"><span class="val" id="trans-val">65%</span></div>
+          <div class="range-row"><label>Depth</label><input type="range" min="0" max="100" value="50" step="1" oninput="updVal('depth-val',this.value+'%')"><span class="val" id="depth-val">50%</span></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- HDRI -->
+  <div id="panel-hdri" class="panel">
+    <div class="panel-header">
+      <div>
+        <h2 class="panel-title">HDRI environments</h2>
+        <div class="panel-sub">Set the lighting environment for your AR jewelry try-on</div>
+      </div>
+      <div class="panel-actions">
+        <button class="btn btn-gold" onclick="saveMsg(this)">Save changes</button>
+      </div>
+    </div>
+    <div class="panel-content">
+      <div class="sec-label">Choose environment</div>
+      <div class="hdri-grid">
+        <div class="hdri-card selected" onclick="selectHdri(this,'Studio soft')">
+          <div class="hdri-thumb" style="background:linear-gradient(135deg,#2A2A2A,#3A3A3A)">Neutral studio</div>
+          <div class="hdri-name">Studio soft</div>
+        </div>
+        <div class="hdri-card" onclick="selectHdri(this,'Golden hour')">
+          <div class="hdri-thumb" style="background:linear-gradient(135deg,#3A2010,#4A3020)">Warm outdoor</div>
+          <div class="hdri-name">Golden hour</div>
+        </div>
+        <div class="hdri-card" onclick="selectHdri(this,'Showroom')">
+          <div class="hdri-thumb" style="background:linear-gradient(135deg,#1A2030,#252535)">Cool retail</div>
+          <div class="hdri-name">Showroom</div>
+        </div>
+        <div class="hdri-card" onclick="selectHdri(this,'Night luxury')">
+          <div class="hdri-thumb" style="background:linear-gradient(135deg,#0A0A1A,#101020)">Dark dramatic</div>
+          <div class="hdri-name">Night luxury</div>
+        </div>
+        <div class="hdri-card" onclick="selectHdri(this,'Overcast')">
+          <div class="hdri-thumb" style="background:linear-gradient(135deg,#252525,#303030)">Soft diffuse</div>
+          <div class="hdri-name">Overcast sky</div>
+        </div>
+        <div class="hdri-card" onclick="selectHdri(this,'Jewel box')">
+          <div class="hdri-thumb" style="background:linear-gradient(135deg,#1E1208,#2A1A0A)">Warm boutique</div>
+          <div class="hdri-name">Jewel box</div>
+        </div>
+      </div>
+      <div class="hdri-upload">
+        <svg viewBox="0 0 24 24" fill="none" stroke-width="1.5"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+        <p>Upload your own .hdr or .exr file</p>
+        <span>Up to 50MB · Instantly applied to your AR try-on widget</span>
+      </div>
+      <div class="sec-label">Environment controls</div>
+      <div class="mat-card" style="margin-top:0">
+        <div class="range-row"><label>Intensity</label><input type="range" min="0" max="100" value="75" step="1" oninput="updVal('hintens-val',this.value+'%')"><span class="val" id="hintens-val">75%</span></div>
+        <div class="range-row"><label>Rotation</label><input type="range" min="0" max="360" value="0" step="1" oninput="updVal('hrot-val',this.value+'°')"><span class="val" id="hrot-val">0°</span></div>
+        <div class="range-row"><label>Blur amount</label><input type="range" min="0" max="100" value="10" step="1" oninput="updVal('hblur-val',this.value+'%')"><span class="val" id="hblur-val">10%</span></div>
+        <div class="range-row"><label>Background</label><select><option>Hidden (AR mode)</option><option>Visible (3D viewer)</option></select></div>
+        <div style="margin-top:8px;font-size:12px;color:var(--text3)">Active: <span id="hdri-active" style="color:var(--gold)">Studio soft</span></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ANALYTICS -->
+  <div id="panel-analytics" class="panel">
+    <div class="panel-header">
+      <div>
+        <h2 class="panel-title">Analytics</h2>
+        <div class="panel-sub">Try-on sessions, conversions, and top performing products</div>
+      </div>
+      <div class="panel-actions">
+        <button class="btn btn-outline">Export CSV</button>
+      </div>
+    </div>
+    <div class="panel-content">
+      <div class="stats-row">
+        <div class="stat-card"><div class="stat-card-val">847</div><div class="stat-card-label">Total try-ons</div><div class="stat-card-change">↑ 24% this month</div></div>
+        <div class="stat-card"><div class="stat-card-val">218</div><div class="stat-card-label">Shares & saves</div><div class="stat-card-change">↑ 41% this month</div></div>
+        <div class="stat-card"><div class="stat-card-val">34%</div><div class="stat-card-label">Conversion lift</div><div class="stat-card-change">vs no try-on</div></div>
+        <div class="stat-card"><div class="stat-card-val">2m 14s</div><div class="stat-card-label">Avg session time</div><div class="stat-card-change">↑ 18% this month</div></div>
+      </div>
+      <div class="chart-area">
+        <div class="chart-header">
+          <div class="chart-title">Daily try-on sessions — May 2026</div>
+          <div class="chart-legend">
+            <div class="legend-item"><div class="legend-dot" style="background:var(--gold)"></div>Try-ons</div>
+            <div class="legend-item"><div class="legend-dot" style="background:var(--success)"></div>Shares</div>
+          </div>
+        </div>
+        <div class="bar-chart">
+          <div class="bar-wrap"><div class="bar" style="height:45%;background:var(--gold);opacity:.6"></div><div class="bar-label">12</div></div>
+          <div class="bar-wrap"><div class="bar" style="height:60%;background:var(--gold);opacity:.65"></div><div class="bar-label">13</div></div>
+          <div class="bar-wrap"><div class="bar" style="height:40%;background:var(--gold);opacity:.6"></div><div class="bar-label">14</div></div>
+          <div class="bar-wrap"><div class="bar" style="height:70%;background:var(--gold);opacity:.7"></div><div class="bar-label">15</div></div>
+          <div class="bar-wrap"><div class="bar" style="height:85%;background:var(--gold);opacity:.75"></div><div class="bar-label">16</div></div>
+          <div class="bar-wrap"><div class="bar" style="height:55%;background:var(--gold);opacity:.65"></div><div class="bar-label">17</div></div>
+          <div class="bar-wrap"><div class="bar" style="height:90%;background:var(--gold)"></div><div class="bar-label">18</div></div>
+          <div class="bar-wrap"><div class="bar" style="height:75%;background:var(--gold);opacity:.72"></div><div class="bar-label">19</div></div>
+          <div class="bar-wrap"><div class="bar" style="height:100%;background:var(--gold)"></div><div class="bar-label">20</div></div>
+        </div>
+      </div>
+      <div class="sec-label">Top performing products</div>
+      <div class="top-items">
+        <div class="top-item">
+          <div class="top-item-rank">1</div>
+          <div class="top-item-info">
+            <div class="top-item-name">Diamond drop earrings</div>
+            <div class="top-item-meta">Earrings · 312 try-ons</div>
+            <div class="progress-bar-bg"><div class="progress-bar" style="width:100%"></div></div>
+          </div>
+          <div class="top-item-val">312</div>
+        </div>
+        <div class="top-item">
+          <div class="top-item-rank">2</div>
+          <div class="top-item-info">
+            <div class="top-item-name">Gold hoop earrings</div>
+            <div class="top-item-meta">Earrings · 248 try-ons</div>
+            <div class="progress-bar-bg"><div class="progress-bar" style="width:79%"></div></div>
+          </div>
+          <div class="top-item-val">248</div>
+        </div>
+        <div class="top-item">
+          <div class="top-item-rank">3</div>
+          <div class="top-item-info">
+            <div class="top-item-name">Solitaire ring</div>
+            <div class="top-item-meta">Rings · 187 try-ons</div>
+            <div class="progress-bar-bg"><div class="progress-bar" style="width:60%"></div></div>
+          </div>
+          <div class="top-item-val">187</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- EMBED -->
+  <div id="panel-embed" class="panel">
+    <div class="panel-header">
+      <div>
+        <h2 class="panel-title">Embed & share</h2>
+        <div class="panel-sub">Put your try-on widget anywhere — website, Etsy, WhatsApp</div>
+      </div>
+    </div>
+    <div class="panel-content">
+      <div class="sec-label">Embed on your website</div>
+      <div class="embed-card">
+        <div class="code-block"><span class="tag">&lt;script</span> <span class="attr">src</span>=<span class="val">"https://cdn.lookora.app/widget.js"</span><br>&nbsp;&nbsp;<span class="attr">data-store-id</span>=<span class="val">"jiya-designs-7x92"</span><br>&nbsp;&nbsp;<span class="attr">data-product</span>=<span class="val">"earring_diamond_drop"</span><span class="tag">&gt;&lt;/script&gt;</span></div>
+        <div style="display:flex;gap:8px">
+          <button class="btn btn-gold">Copy code</button>
+          <button class="btn btn-outline">View install guide</button>
+        </div>
+      </div>
+      <div class="sec-label">Shareable try-on link</div>
+      <div class="embed-card">
+        <div class="link-row">
+          <input class="link-input" type="text" value="https://lookora.app/jiya-designs?p=dd01" readonly>
+          <button class="btn btn-gold">Copy link</button>
+        </div>
+        <div style="margin-top:10px;font-size:12px;color:var(--text3)">Share this link anywhere. Customers tap it, camera opens, jewelry appears instantly — no app needed.</div>
+      </div>
+      <div class="sec-label">QR code for physical store</div>
+      <div class="embed-card" style="display:flex;gap:20px;align-items:center">
+        <div class="qr-placeholder">
+          <svg viewBox="0 0 24 24" fill="none" stroke-width="1"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="5" y="5" width="3" height="3"/><rect x="16" y="5" width="3" height="3"/><rect x="16" y="16" width="3" height="3"/><rect x="5" y="16" width="3" height="3"/></svg>
+        </div>
+        <div>
+          <div style="font-size:13px;font-weight:500;color:var(--text);margin-bottom:6px">Print for your store counter</div>
+          <div style="font-size:12px;color:var(--text3);line-height:1.6;margin-bottom:12px">Customers scan this with their phone camera — no app, no link typing. AR try-on opens instantly.</div>
+          <div style="display:flex;gap:8px">
+            <button class="btn btn-gold">Download QR (PNG)</button>
+            <button class="btn btn-outline">Download QR (PDF)</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- BRANDING -->
+  <div id="panel-brand" class="panel">
+    <div class="panel-header">
+      <div>
+        <h2 class="panel-title">Branding</h2>
+        <div class="panel-sub">Make the try-on widget look like your brand, not ours</div>
+      </div>
+      <div class="panel-actions">
+        <button class="btn btn-gold" onclick="saveMsg(this)">Save changes</button>
+      </div>
+    </div>
+    <div class="panel-content">
+      <div class="mat-grid">
+        <div class="mat-card">
+          <div class="mat-card-title">
+            <svg viewBox="0 0 24 24" fill="none" stroke-width="1.5"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+            Brand identity
+          </div>
+          <div class="glb-upload" style="margin-bottom:14px">
+            <svg viewBox="0 0 24 24" fill="none" stroke-width="1.5" style="width:22px;height:22px"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+            <p>Upload your logo</p>
+            <span>PNG or SVG · Transparent background recommended</span>
+          </div>
+          <div class="range-row"><label>Brand name</label><input type="text" placeholder="Jiya Designs" style="flex:1;padding:6px 10px;background:var(--surface2);border:1px solid var(--border);border-radius:var(--radius-sm);color:var(--text);font-family:'DM Sans',sans-serif;font-size:12px;outline:none"></div>
+          <div class="range-row" style="margin-top:10px"><label>Primary color</label><input type="color" value="#C9A84C" style="width:36px;height:28px;border:1px solid var(--border);border-radius:6px;cursor:pointer;padding:2px;background:transparent"><span style="font-size:12px;color:var(--text2);font-family:monospace;margin-left:8px">#C9A84C</span></div>
+          <div class="range-row"><label>Font style</label><select><option>DM Sans (modern)</option><option>Cormorant (elegant)</option><option>Playfair Display</option><option>Inter (clean)</option></select></div>
+          <div class="range-row"><label>Button style</label><select><option>Rounded (pill)</option><option>Soft corners</option><option>Sharp (square)</option></select></div>
+        </div>
+        <div class="mat-card">
+          <div class="mat-card-title">
+            <svg viewBox="0 0 24 24" fill="none" stroke-width="1.5"><rect x="2" y="3" width="20" height="14" rx="2"/><path d="M8 21h8M12 17v4"/></svg>
+            Widget preview
+          </div>
+          <div style="background:var(--bg);border-radius:var(--radius);padding:16px;text-align:center">
+            <div style="font-size:11px;color:var(--text3);margin-bottom:12px">Live preview of your branded widget</div>
+            <div style="background:var(--surface2);border-radius:10px;padding:16px">
+              <div style="font-size:14px;font-weight:500;color:var(--gold);margin-bottom:8px">Jiya Designs</div>
+              <div style="background:var(--surface3);border-radius:8px;height:60px;display:flex;align-items:center;justify-content:center;margin-bottom:10px">
+                <span style="font-size:11px;color:var(--text3)">Camera preview area</span>
+              </div>
+              <button style="width:100%;padding:8px;background:var(--gold);color:var(--bg);border:none;border-radius:20px;font-size:12px;font-weight:500;cursor:pointer">Try on now</button>
+            </div>
+          </div>
+          <div class="sec-label" style="margin-top:16px">Watermark on shared photos</div>
+          <div style="display:flex;align-items:center;gap:10px;padding:10px 12px;background:var(--surface2);border-radius:var(--radius-sm)">
+            <input type="checkbox" checked style="accent-color:var(--gold)">
+            <span style="font-size:12px;color:var(--text2)">Add brand watermark when customers save or share their try-on photo</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+</main>
+</div>
+
+<script>
+function switchPanel(id, el) {
+  document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+  document.getElementById('panel-' + id).classList.add('active');
+  if (el) el.classList.add('active');
+}
+function selectCatTab(el) {
+  document.querySelectorAll('.cat-tab').forEach(t => t.classList.remove('active'));
+  el.classList.add('active');
+}
+const goldColors = {
+  yellow: 'radial-gradient(circle at 35% 35%, #F5D98A, #C9A84C 50%, #7A5820)',
+  white: 'radial-gradient(circle at 35% 35%, #FFFFFF, #C8C8C8 50%, #888888)',
+  rose: 'radial-gradient(circle at 35% 35%, #F5C4A8, #E8A080 50%, #9A5040)',
+  green: 'radial-gradient(circle at 35% 35%, #E8E0C0, #C8B860 50%, #786820)'
+};
+function setGold(type, el) {
+  document.querySelectorAll('.swatch').forEach(s => s.classList.remove('selected'));
+  el.classList.add('selected');
+  document.getElementById('gold-sphere').style.background = goldColors[type];
+}
+function applyCustomGold(val) {
+  document.getElementById('gold-sphere').style.background = val;
+  document.getElementById('gold-hex').textContent = val;
+}
+function resetGold() {
+  document.getElementById('gold-sphere').style.background = goldColors.yellow;
+  document.querySelectorAll('.swatch')[0].classList.add('selected');
+}
+function updVal(id, val) { document.getElementById(id).textContent = val; }
+function updGem() {}
+function selectGem(el, color, name) {
+  document.querySelectorAll('.gem-opt').forEach(g => g.classList.remove('selected'));
+  el.classList.add('selected');
+  document.getElementById('gem-sphere').style.background =
+    'radial-gradient(circle at 30% 30%, rgba(255,255,255,.8), ' + color + '99 50%, ' + color + '55)';
+}
+function selectHdri(el, name) {
+  document.querySelectorAll('.hdri-card').forEach(c => c.classList.remove('selected'));
+  el.classList.add('selected');
+  document.getElementById('hdri-active').textContent = name;
+}
+function saveMsg(btn) {
+  const orig = btn.textContent;
+  btn.textContent = 'Saved ✓';
+  btn.style.background = '#4CAF50';
+  setTimeout(() => { btn.textContent = orig; btn.style.background = ''; }, 1800);
+}
+</script>
